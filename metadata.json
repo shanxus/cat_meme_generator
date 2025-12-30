@@ -1,0 +1,8 @@
+{
+  "name": "Cat Meme Gen - Purrfect Memes",
+  "description": "A powerful AI-driven cat meme generator. Upload your cat photos or videos and transform them into viral internet sensations using Gemini's advanced image and video models.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
