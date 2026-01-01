@@ -38,9 +38,14 @@ export const compressImage = (dataUrl: string, maxWidth: number = 800, quality: 
 
 import { MemeCaptions } from '../types';
 
+/**
+ * Draws meme text onto an image and returns a compressed data URL.
+ * Resizes the image to a reasonable size for web storage.
+ */
 export const drawMemeOnCanvas = (
     imageUrl: string,
-    captions: MemeCaptions
+    captions: MemeCaptions,
+    maxWidth: number = 1200 // Max width for the final stored meme
 ): Promise<string> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -53,14 +58,22 @@ export const drawMemeOnCanvas = (
                 return;
             }
 
-            // Set canvas size to match image
-            canvas.width = img.width;
-            canvas.height = img.height;
+            // Calculate resized dimensions for storage efficiency
+            let width = img.width;
+            let height = img.height;
+            if (width > maxWidth) {
+                height = (height * maxWidth) / width;
+                width = maxWidth;
+            }
 
-            // Draw original image
-            ctx.drawImage(img, 0, 0);
+            // Set canvas size to the optimized dimensions
+            canvas.width = width;
+            canvas.height = height;
 
-            // Meme Text Styling
+            // Draw original image resized
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Meme Text Styling (relative to resized width)
             const fontSize = Math.floor(canvas.width / 12);
             ctx.font = `bold ${fontSize}px Impact, uppercase, sans-serif`;
             ctx.fillStyle = "white";
@@ -70,7 +83,7 @@ export const drawMemeOnCanvas = (
             ctx.textBaseline = "top";
 
             // Helper to wrap text
-            const wrapText = (text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
+            const wrapText = (text: string, x: number, y: number, textMaxWidth: number, lineHeight: number) => {
                 const words = text.split(" ");
                 let line = "";
                 let currentY = y;
@@ -79,7 +92,7 @@ export const drawMemeOnCanvas = (
                     const testLine = line + words[n] + " ";
                     const metrics = ctx.measureText(testLine);
                     const testWidth = metrics.width;
-                    if (testWidth > maxWidth && n > 0) {
+                    if (testWidth > textMaxWidth && n > 0) {
                         ctx.fillText(line, x, currentY);
                         ctx.strokeText(line, x, currentY);
                         line = words[n] + " ";
@@ -92,7 +105,7 @@ export const drawMemeOnCanvas = (
                 ctx.strokeText(line, x, currentY);
             };
 
-            const padding = 20;
+            const padding = canvas.height * 0.05; // 5% padding
             const lineHeight = fontSize * 1.1;
 
             // Draw Top Text
@@ -104,8 +117,6 @@ export const drawMemeOnCanvas = (
             // Draw Bottom Text
             if (captions.bottomText) {
                 ctx.textBaseline = "bottom";
-                // To draw from bottom up, we need to calculate the height of wrapped text first
-                // For simplicity, we just estimate or draw at the very bottom
                 const words = captions.bottomText.split(" ");
                 const lines = [];
                 let currentLine = "";
@@ -127,7 +138,8 @@ export const drawMemeOnCanvas = (
                 });
             }
 
-            resolve(canvas.toDataURL("image/png"));
+            // Resolve as compressed JPEG instead of PNG to drastically reduce size (11MB -> <500KB)
+            resolve(canvas.toDataURL("image/jpeg", 0.8));
         };
         img.onerror = (err) => reject(err);
         img.src = imageUrl;

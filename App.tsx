@@ -22,9 +22,17 @@ const App: React.FC = () => {
   }, []);
 
   const saveToHistory = (item: MemeItem) => {
-    const newHistory = [item, ...history];
-    setHistory(newHistory);
-    localStorage.setItem('cat_meme_history', JSON.stringify(newHistory));
+    try {
+      const newHistory = [item, ...history];
+      setHistory(newHistory);
+      localStorage.setItem('cat_meme_history', JSON.stringify(newHistory));
+    } catch (e: any) {
+      console.error("Storage Error:", e);
+      if (e.name === 'QuotaExceededError' || e.message?.toLowerCase().includes('quota')) {
+        throw new Error("STORAGE_FULL: Your history is full. Please clear some memes.");
+      }
+      throw e;
+    }
   };
 
   const clearHistory = () => {
@@ -37,7 +45,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
-      
+
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
         {activeTab === 'create' ? (
           <MemeCreator onMemeGenerated={saveToHistory} />

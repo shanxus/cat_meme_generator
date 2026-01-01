@@ -78,11 +78,12 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
       return;
     }
 
+    let resultUrl = '';
     try {
       setStatus(GenerationStatus.GENERATING);
       setError(null);
+      setGeneratedResult(null); // Clear previous result to avoid confusion
 
-      let resultUrl = '';
       let captions: MemeCaptions;
 
       if (isMockMode) {
@@ -112,13 +113,26 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
     } catch (err: any) {
       console.error("Capture Error:", err);
       let userMessage = "Failed to generate meme. Please try again.";
-      if (err.message?.includes("429") || err.message?.includes("quota") || err.message?.includes("RESOURCE_EXHAUSTED")) {
-        userMessage = "The API is busy (Quota Limit). Please wait 10 seconds and try again.";
-      } else if (err.message?.includes("API key")) {
+
+      const errorMessage = err.message || "";
+
+      // Distinguish between Gemini API Quota and LocalStorage Quota
+      if (errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED")) {
+        userMessage = "The API is busy (RPM Limit). Please wait 10 seconds and try again.";
+      } else if (errorMessage.toLowerCase().includes("quota") || errorMessage.includes("STORAGE_FULL") || err.name === "QuotaExceededError") {
+        userMessage = "Meme generated, but your history is full! Please clear some old memes in the Gallery.";
+      } else if (errorMessage.includes("API key")) {
         userMessage = "Invalid API Key. Please check your .env configuration.";
       }
+
       setError(userMessage);
-      setStatus(GenerationStatus.ERROR);
+      // We don't set status to ERROR if the result was actually generated
+      // but only the saving failed.
+      if (!resultUrl) {
+        setStatus(GenerationStatus.ERROR);
+      } else {
+        setStatus(GenerationStatus.SUCCESS);
+      }
     }
   };
 
@@ -215,8 +229,8 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
               onClick={handleGenerate}
               disabled={status === GenerationStatus.GENERATING || isConverting}
               className={`w-full py-3.5 md:py-4 rounded-2xl font-bold text-base md:text-lg shadow-lg flex items-center justify-center gap-3 transition-all ${status === GenerationStatus.GENERATING || isConverting
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-[0.98]'
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-[0.98]'
                 }`}
             >
               {status === GenerationStatus.GENERATING ? (
