@@ -1,8 +1,8 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { VideoGenerationConfig, MemeCaptions } from "../types";
+import { MemeCaptions } from "../types";
 
-// Helper to generate photo meme captions using gemini-1.5-flash
+// Helper to generate photo meme captions using gemini-flash-latest
 export const generatePhotoMeme = async (
   imageData: string,
   prompt: string
@@ -46,49 +46,4 @@ export const generatePhotoMeme = async (
   }
 
   throw new Error("Failed to generate captions.");
-};
-
-// Helper to generate video memes using veo-3.1-generate-preview
-export const generateVideoMeme = async (
-  imagePromptData: string | null,
-  userPrompt: string,
-  config: VideoGenerationConfig
-): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-  const finalPrompt = `A high-quality, funny cat meme video. ${userPrompt}. Follow the style of trending internet cat memes like 'Vibing Cat' or 'Zoomies'. Professional lighting, cinematic yet comedic.`;
-
-  const payload: any = {
-    model: 'veo-3.1-generate-preview',
-    prompt: finalPrompt,
-    config: {
-      numberOfVideos: 1,
-      resolution: config.resolution,
-      aspectRatio: config.aspectRatio
-    }
-  };
-
-  if (imagePromptData) {
-    payload.image = {
-      imageBytes: imagePromptData.split(',')[1],
-      mimeType: 'image/png'
-    };
-  }
-
-  let operation = await ai.models.generateVideos(payload);
-
-  while (!operation.done) {
-    await new Promise(resolve => setTimeout(resolve, 10000));
-    const pollAi = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    operation = await pollAi.operations.getVideosOperation({ operation: operation });
-  }
-
-  const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-  if (!downloadLink) throw new Error("Video generation failed.");
-
-  const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
-  if (!response.ok) throw new Error("Failed to download the generated video.");
-
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
 };

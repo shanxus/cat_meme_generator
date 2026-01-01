@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { MemeType, GenerationStatus, MemeItem, MemeCaptions } from '../types';
-import { generatePhotoMeme, generateVideoMeme } from '../services/geminiService';
+import { generatePhotoMeme } from '../services/geminiService';
 import { drawMemeOnCanvas, compressImage } from '../utils/canvasUtils';
 
 // Define heic2any globally as it's loaded via CDN
@@ -12,7 +12,6 @@ interface MemeCreatorProps {
 }
 
 const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
-  const [selectedType, setSelectedType] = useState<MemeType>(MemeType.PHOTO);
   const [status, setStatus] = useState<GenerationStatus>(GenerationStatus.IDLE);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<string>('');
@@ -73,19 +72,8 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
     }
   };
 
-  const checkApiKey = async (): Promise<boolean> => {
-    if (selectedType === MemeType.VIDEO && !isMockMode) {
-      const hasKey = await window.aistudio.hasSelectedApiKey();
-      if (!hasKey) {
-        await window.aistudio.openSelectKey();
-        return true;
-      }
-    }
-    return true;
-  };
-
   const handleGenerate = async () => {
-    if (!previewUrl && selectedType === MemeType.PHOTO) {
+    if (!previewUrl) {
       setError("Please upload a cat photo first!");
       return;
     }
@@ -95,42 +83,28 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
       setError(null);
 
       let resultUrl = '';
-      if (selectedType === MemeType.PHOTO) {
-        let captions: MemeCaptions;
-        if (isMockMode) {
-          // Use Mock Data
-          await new Promise(r => setTimeout(r, 800)); // Simulate delay
-          captions = getMockCaptions();
-        } else {
-          // Use AI Service
-          await checkApiKey();
-          // Compress image to save tokens (Gemini has TPM limits)
-          const compressedImage = await compressImage(previewUrl!);
-          captions = await generatePhotoMeme(compressedImage, prompt);
-        }
-        // Always draw on Canvas locally
-        resultUrl = await drawMemeOnCanvas(previewUrl!, captions);
+      let captions: MemeCaptions;
+
+      if (isMockMode) {
+        await new Promise(r => setTimeout(r, 800)); // Simulate delay
+        captions = getMockCaptions();
       } else {
-        if (isMockMode) {
-          setError("Mock Mode only supports Photo Memes currently.");
-          setStatus(GenerationStatus.IDLE);
-          return;
-        }
-        await checkApiKey();
-        resultUrl = await generateVideoMeme(previewUrl, prompt, {
-          resolution: '720p',
-          aspectRatio: '16:9'
-        });
+        // Compress image to save tokens (Gemini has TPM limits)
+        const compressedImage = await compressImage(previewUrl!);
+        captions = await generatePhotoMeme(compressedImage, prompt);
       }
+
+      // Always draw on Canvas locally
+      resultUrl = await drawMemeOnCanvas(previewUrl!, captions);
 
       setGeneratedResult(resultUrl);
       setStatus(GenerationStatus.SUCCESS);
 
       const newItem: MemeItem = {
         id: Date.now().toString(),
-        type: selectedType,
+        type: MemeType.PHOTO,
         url: resultUrl,
-        prompt: prompt || (selectedType === MemeType.PHOTO ? "Photo Meme" : "Video Meme"),
+        prompt: prompt || "Photo Meme",
         createdAt: Date.now()
       };
       onMemeGenerated(newItem);
@@ -146,7 +120,7 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
     if (!generatedResult) return;
     const link = document.createElement('a');
     link.href = generatedResult;
-    link.download = `cat-meme-${Date.now()}.${selectedType === MemeType.PHOTO ? 'png' : 'mp4'}`;
+    link.download = `cat-meme-${Date.now()}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -185,33 +159,7 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
           {/* Left Column: Upload & Options */}
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">1. Select Meme Type</label>
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setSelectedType(MemeType.PHOTO)}
-                  className={`flex-1 p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${selectedType === MemeType.PHOTO
-                    ? 'border-orange-500 bg-orange-50 text-orange-700'
-                    : 'border-gray-100 hover:border-orange-200 text-gray-400'
-                    }`}
-                >
-                  <i className="fa-solid fa-camera text-2xl"></i>
-                  <span className="font-medium">Photo Meme</span>
-                </button>
-                <button
-                  onClick={() => setSelectedType(MemeType.VIDEO)}
-                  className={`flex-1 p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${selectedType === MemeType.VIDEO
-                    ? 'border-orange-500 bg-orange-50 text-orange-700'
-                    : 'border-gray-100 hover:border-orange-200 text-gray-400'
-                    }`}
-                >
-                  <i className="fa-solid fa-video text-2xl"></i>
-                  <span className="font-medium">Video Meme</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">2. Upload your Cat</label>
+              <label className="block text-sm font-semibold text-gray-700">1. Upload your Cat</label>
               <div
                 onClick={() => !isConverting && fileInputRef.current?.click()}
                 className={`group relative h-48 border-2 border-dashed border-orange-200 rounded-3xl flex flex-col items-center justify-center transition-all overflow-hidden ${isConverting ? 'cursor-wait bg-orange-50/20' : 'cursor-pointer hover:border-orange-400 hover:bg-orange-50/30'}`}
@@ -234,6 +182,7 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
                       <i className="fa-solid fa-cloud-arrow-up text-xl"></i>
                     </div>
                     <p className="text-gray-500 text-sm">Click to upload photo</p>
+                    <p className="text-gray-400 text-xs mt-1">Supports JPG, PNG, HEIC</p>
                   </>
                 )}
                 <input
@@ -247,7 +196,7 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">3. Add Funny Context</label>
+              <label className="block text-sm font-semibold text-gray-700">2. Add Funny Context</label>
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
@@ -260,8 +209,8 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
               onClick={handleGenerate}
               disabled={status === GenerationStatus.GENERATING || isConverting}
               className={`w-full py-4 rounded-2xl font-bold text-lg shadow-lg flex items-center justify-center gap-3 transition-all ${status === GenerationStatus.GENERATING || isConverting
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-[0.98]'
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-[0.98]'
                 }`}
             >
               {status === GenerationStatus.GENERATING ? (
@@ -306,25 +255,13 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
                   </div>
                   <h3 className="text-xl font-bold text-orange-800 mb-2">Creating Meme...</h3>
                   <p className="text-orange-600/60 text-sm italic">
-                    {selectedType === MemeType.VIDEO
-                      ? "Hang tight! Video generation can take up to a minute of pure feline concentration."
-                      : "Processing pixels for maximum laughter..."}
+                    Processing pixels for maximum laughter...
                   </p>
                 </div>
               ) : generatedResult ? (
                 <div className="h-full flex flex-col">
                   <div className="flex-1 bg-black flex items-center justify-center text-center p-2">
-                    {selectedType === MemeType.PHOTO ? (
-                      <img src={generatedResult} alt="Generated Meme" className="max-h-full object-contain mx-auto" />
-                    ) : (
-                      <video
-                        src={generatedResult}
-                        controls
-                        autoPlay
-                        loop
-                        className="max-h-full mx-auto"
-                      />
-                    )}
+                    <img src={generatedResult} alt="Generated Meme" className="max-h-full object-contain mx-auto" />
                   </div>
                   <div className="p-4 bg-white border-t border-orange-100 flex gap-3">
                     <button

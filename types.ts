@@ -1,7 +1,6 @@
 
 export enum MemeType {
-  PHOTO = 'PHOTO',
-  VIDEO = 'VIDEO'
+  PHOTO = 'PHOTO'
 }
 
 export enum GenerationStatus {
@@ -19,11 +18,6 @@ export interface MemeItem {
   thumbnailUrl?: string;
   prompt: string;
   createdAt: number;
-}
-
-export interface VideoGenerationConfig {
-  resolution: '720p' | '1080p';
-  aspectRatio: '16:9' | '9:16';
 }
 
 export interface MemeCaptions {
