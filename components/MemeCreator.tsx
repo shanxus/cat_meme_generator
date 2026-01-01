@@ -164,13 +164,14 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
             Meme Creator
           </h2>
 
-          <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-full border border-orange-100 self-end sm:self-auto">
-            <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">Demo Mode</span>
+          <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-full border border-orange-100 flex-shrink-0">
+            <span className="text-[10px] md:text-xs font-bold text-orange-600 uppercase tracking-wider select-none">Demo Mode</span>
             <button
               onClick={() => setIsMockMode(!isMockMode)}
-              className={`w-9 h-4.5 rounded-full relative transition-colors ${isMockMode ? 'bg-orange-500' : 'bg-gray-300'}`}
+              className={`w-10 h-5 rounded-full relative transition-colors duration-200 ease-in-out focus:outline-none ${isMockMode ? 'bg-orange-500' : 'bg-gray-300'}`}
+              aria-label="Toggle Demo Mode"
             >
-              <div className={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full transition-all ${isMockMode ? 'left-5' : 'left-0.5'}`}></div>
+              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all duration-200 ease-in-out shadow-sm ${isMockMode ? 'translate-x-5' : 'translate-x-0.5'}`}></div>
             </button>
           </div>
         </div>
