@@ -142,33 +142,33 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
   };
 
   return (
-    <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-orange-100 transition-all">
-      <div className="p-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold text-orange-900 flex items-center gap-2">
+    <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-orange-100 transition-all max-w-full">
+      <div className="p-4 md:p-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-orange-900 flex items-center gap-2">
             <i className="fa-solid fa-wand-magic-sparkles text-orange-500"></i>
-            Create Your Purr-fect Meme
+            Meme Creator
           </h2>
 
-          <div className="flex items-center gap-2 bg-orange-50 px-4 py-2 rounded-full border border-orange-100">
-            <span className="text-xs font-bold text-orange-600 uppercase tracking-wider">Demo Mode</span>
+          <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-full border border-orange-100 self-end sm:self-auto">
+            <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wider">Demo Mode</span>
             <button
               onClick={() => setIsMockMode(!isMockMode)}
-              className={`w-10 h-5 rounded-full relative transition-colors ${isMockMode ? 'bg-orange-500' : 'bg-gray-300'}`}
+              className={`w-9 h-4.5 rounded-full relative transition-colors ${isMockMode ? 'bg-orange-500' : 'bg-gray-300'}`}
             >
-              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isMockMode ? 'left-6' : 'left-1'}`}></div>
+              <div className={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full transition-all ${isMockMode ? 'left-5' : 'left-0.5'}`}></div>
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
           {/* Left Column: Upload & Options */}
-          <div className="space-y-6">
+          <div className="space-y-5 md:space-y-6">
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-700">1. Upload your Cat</label>
               <div
                 onClick={() => !isConverting && fileInputRef.current?.click()}
-                className={`group relative h-48 border-2 border-dashed border-orange-200 rounded-3xl flex flex-col items-center justify-center transition-all overflow-hidden ${isConverting ? 'cursor-wait bg-orange-50/20' : 'cursor-pointer hover:border-orange-400 hover:bg-orange-50/30'}`}
+                className={`group relative h-40 md:h-48 border-2 border-dashed border-orange-200 rounded-3xl flex flex-col items-center justify-center transition-all overflow-hidden ${isConverting ? 'cursor-wait bg-orange-50/20' : 'cursor-pointer hover:border-orange-400 hover:bg-orange-50/30'}`}
               >
                 {isConverting ? (
                   <div className="flex flex-col items-center">
@@ -184,11 +184,11 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
                   </>
                 ) : (
                   <>
-                    <div className="w-12 h-12 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <i className="fa-solid fa-cloud-arrow-up text-xl"></i>
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mb-2 md:mb-3 group-hover:scale-110 transition-transform">
+                      <i className="fa-solid fa-cloud-arrow-up text-lg md:text-xl"></i>
                     </div>
-                    <p className="text-gray-500 text-sm">Click to upload photo</p>
-                    <p className="text-gray-400 text-xs mt-1">Supports JPG, PNG, HEIC</p>
+                    <p className="text-gray-500 text-xs md:text-sm">Click to upload photo</p>
+                    <p className="text-gray-400 text-[10px] md:text-xs mt-1">Supports JPG, PNG, HEIC</p>
                   </>
                 )}
                 <input
@@ -206,17 +206,17 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Ex: 'Cat eating spaghetti' or 'Angry cat demands snacks'..."
-                className="w-full p-4 rounded-2xl border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 focus:outline-none h-32 resize-none text-gray-900 font-medium placeholder:text-gray-400 bg-white transition-all shadow-inner"
+                placeholder="Ex: 'Angry cat demands snacks'..."
+                className="w-full p-4 rounded-2xl border-2 border-orange-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 focus:outline-none h-24 md:h-32 resize-none text-gray-900 font-medium placeholder:text-gray-400 bg-white transition-all shadow-inner text-sm md:text-base"
               />
             </div>
 
             <button
               onClick={handleGenerate}
               disabled={status === GenerationStatus.GENERATING || isConverting}
-              className={`w-full py-4 rounded-2xl font-bold text-lg shadow-lg flex items-center justify-center gap-3 transition-all ${status === GenerationStatus.GENERATING || isConverting
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-[0.98]'
+              className={`w-full py-3.5 md:py-4 rounded-2xl font-bold text-base md:text-lg shadow-lg flex items-center justify-center gap-3 transition-all ${status === GenerationStatus.GENERATING || isConverting
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-[0.98]'
                 }`}
             >
               {status === GenerationStatus.GENERATING ? (
@@ -227,68 +227,65 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
               ) : (
                 <>
                   <i className="fa-solid fa-paw"></i>
-                  {isMockMode ? "Generate (Demo Mode)" : "Generate Meme"}
+                  {isMockMode ? "Generate (Demo)" : "Generate Meme"}
                 </>
               )}
             </button>
 
             {error && (
-              <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm flex items-center gap-3">
+              <div className="p-3 md:p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs md:text-sm flex items-center gap-3">
                 <i className="fa-solid fa-circle-exclamation"></i>
                 {error}
               </div>
             )}
 
             {isMockMode && (
-              <p className="text-xs text-orange-400 italic text-center">
-                💡 Demo mode is ON: Captions are locally generated to save API quota.
+              <p className="text-[10px] md:text-xs text-orange-400 italic text-center">
+                💡 Demo mode is ON: Captions are locally generated.
               </p>
             )}
           </div>
 
           {/* Right Column: Result Preview */}
-          <div className="flex flex-col h-full min-h-[400px]">
+          <div className="flex flex-col min-h-[350px] md:min-h-[450px]">
             <label className="block text-sm font-semibold text-gray-700 mb-2">Live Result</label>
-            <div className="flex-1 rounded-3xl border-2 border-orange-100 bg-orange-50/30 overflow-hidden relative group">
+            <div className="flex-1 rounded-3xl border-2 border-orange-100 bg-orange-50/30 overflow-hidden relative flex flex-col">
               {status === GenerationStatus.GENERATING ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
-                  <div className="w-24 h-24 mb-6 relative">
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-orange-50/50 z-10">
+                  <div className="w-16 h-16 md:w-20 md:h-20 mb-4 relative">
                     <div className="absolute inset-0 rounded-full border-4 border-orange-200 animate-pulse"></div>
                     <div className="absolute inset-0 rounded-full border-4 border-orange-500 border-t-transparent animate-spin"></div>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <i className="fa-solid fa-cat text-4xl text-orange-500"></i>
+                      <i className="fa-solid fa-cat text-2xl md:text-3xl text-orange-500"></i>
                     </div>
                   </div>
-                  <h3 className="text-xl font-bold text-orange-800 mb-2">Creating Meme...</h3>
-                  <p className="text-orange-600/60 text-sm italic">
-                    Processing pixels for maximum laughter...
-                  </p>
+                  <h3 className="text-lg md:text-xl font-bold text-orange-800 mb-2">Creating...</h3>
                 </div>
               ) : generatedResult ? (
-                <div className="h-full flex flex-col">
-                  <div className="flex-1 bg-black flex items-center justify-center text-center p-2">
-                    <img src={generatedResult} alt="Generated Meme" className="max-h-full object-contain mx-auto" />
+                <div className="h-full flex flex-col min-h-0">
+                  <div className="flex-1 bg-black flex items-center justify-center overflow-hidden p-1">
+                    <img src={generatedResult} alt="Generated Meme" className="max-h-full max-w-full object-contain mx-auto" />
                   </div>
-                  <div className="p-4 bg-white border-t border-orange-100 flex gap-3">
+                  <div className="p-3 md:p-4 bg-white border-t border-orange-100 flex gap-2 md:gap-3 shrink-0">
                     <button
                       onClick={handleDownload}
-                      className="flex-1 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 bg-green-500 text-white py-2.5 md:py-3 rounded-xl font-bold text-sm md:text-base hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
                     >
                       <i className="fa-solid fa-download"></i>
                       Download
                     </button>
                     <button
                       onClick={reset}
-                      className="px-6 border-2 border-orange-100 text-orange-400 py-3 rounded-xl font-bold hover:bg-orange-50 hover:text-orange-600 transition-all"
+                      className="px-4 md:px-6 border-2 border-orange-100 text-orange-400 py-2.5 md:py-3 rounded-xl font-bold text-sm md:text-base hover:bg-orange-50 hover:text-orange-600 transition-all"
                     >
                       New
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-orange-200 p-8">
-                  <i className="fa-solid fa-image text-8xl mb-4"></i>
-                  <p className="text-lg font-medium">Your masterpiece will appear here</p>
+                <div className="flex-1 flex flex-col items-center justify-center text-orange-200 p-8">
+                  <i className="fa-solid fa-image text-6xl md:text-8xl mb-4"></i>
+                  <p className="text-base md:text-lg font-medium text-center">Your masterpiece awaits</p>
                 </div>
               )}
             </div>
