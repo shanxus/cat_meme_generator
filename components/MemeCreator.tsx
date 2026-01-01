@@ -18,7 +18,7 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
   const [error, setError] = useState<string | null>(null);
   const [generatedResult, setGeneratedResult] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState<boolean>(false);
-  const [isMockMode, setIsMockMode] = useState<boolean>(true); // Default to true for easier testing
+  const [isMockMode, setIsMockMode] = useState<boolean>(false); // Changed default to false as requested
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
