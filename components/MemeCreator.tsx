@@ -110,8 +110,14 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
       onMemeGenerated(newItem);
 
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to generate meme. Please try again.");
+      console.error("Capture Error:", err);
+      let userMessage = "Failed to generate meme. Please try again.";
+      if (err.message?.includes("429") || err.message?.includes("quota") || err.message?.includes("RESOURCE_EXHAUSTED")) {
+        userMessage = "The API is busy (Quota Limit). Please wait 10 seconds and try again.";
+      } else if (err.message?.includes("API key")) {
+        userMessage = "Invalid API Key. Please check your .env configuration.";
+      }
+      setError(userMessage);
       setStatus(GenerationStatus.ERROR);
     }
   };
@@ -209,8 +215,8 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
               onClick={handleGenerate}
               disabled={status === GenerationStatus.GENERATING || isConverting}
               className={`w-full py-4 rounded-2xl font-bold text-lg shadow-lg flex items-center justify-center gap-3 transition-all ${status === GenerationStatus.GENERATING || isConverting
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-[0.98]'
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-[0.98]'
                 }`}
             >
               {status === GenerationStatus.GENERATING ? (
