@@ -1,7 +1,8 @@
 
 import React, { useState, useRef } from 'react';
-import { MemeType, GenerationStatus, MemeItem } from '../types';
+import { MemeType, GenerationStatus, MemeItem, MemeCaptions } from '../types';
 import { generatePhotoMeme, generateVideoMeme } from '../services/geminiService';
+import { drawMemeOnCanvas, compressImage } from '../utils/canvasUtils';
 
 // Define heic2any globally as it's loaded via CDN
 declare const heic2any: any;
@@ -18,8 +19,20 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
   const [error, setError] = useState<string | null>(null);
   const [generatedResult, setGeneratedResult] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState<boolean>(false);
-  
+  const [isMockMode, setIsMockMode] = useState<boolean>(true); // Default to true for easier testing
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const getMockCaptions = (): MemeCaptions => {
+    const mocks = [
+      { topText: "ME WHEN I SEE", bottomText: "A BUG IN PRODUCTION" },
+      { topText: "I CAN HAZ", bottomText: "CLEAN CODE?" },
+      { topText: "NO TALK ME", bottomText: "I ANGY" },
+      { topText: "POV: YOURE A SENIOR", bottomText: "LOOKING AT JUNIOR CODE" },
+      { topText: "MERRY CHRISTMAS", bottomText: "YA FILTHY ANIMAL" }
+    ];
+    return mocks[Math.floor(Math.random() * mocks.length)];
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -33,13 +46,12 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
     if (isHeic) {
       try {
         setIsConverting(true);
-        // Convert HEIC to JPEG for browser preview and API consumption
         const convertedBlob = await heic2any({
           blob: file,
           toType: 'image/jpeg',
           quality: 0.8
         });
-        
+
         const blobToUse = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
         const reader = new FileReader();
         reader.onload = () => {
@@ -62,11 +74,11 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
   };
 
   const checkApiKey = async (): Promise<boolean> => {
-    if (selectedType === MemeType.VIDEO) {
+    if (selectedType === MemeType.VIDEO && !isMockMode) {
       const hasKey = await window.aistudio.hasSelectedApiKey();
       if (!hasKey) {
         await window.aistudio.openSelectKey();
-        return true; 
+        return true;
       }
     }
     return true;
@@ -82,12 +94,29 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
       setStatus(GenerationStatus.GENERATING);
       setError(null);
 
-      await checkApiKey();
-
       let resultUrl = '';
       if (selectedType === MemeType.PHOTO) {
-        resultUrl = await generatePhotoMeme(previewUrl!, prompt);
+        let captions: MemeCaptions;
+        if (isMockMode) {
+          // Use Mock Data
+          await new Promise(r => setTimeout(r, 800)); // Simulate delay
+          captions = getMockCaptions();
+        } else {
+          // Use AI Service
+          await checkApiKey();
+          // Compress image to save tokens (Gemini has TPM limits)
+          const compressedImage = await compressImage(previewUrl!);
+          captions = await generatePhotoMeme(compressedImage, prompt);
+        }
+        // Always draw on Canvas locally
+        resultUrl = await drawMemeOnCanvas(previewUrl!, captions);
       } else {
+        if (isMockMode) {
+          setError("Mock Mode only supports Photo Memes currently.");
+          setStatus(GenerationStatus.IDLE);
+          return;
+        }
+        await checkApiKey();
         resultUrl = await generateVideoMeme(previewUrl, prompt, {
           resolution: '720p',
           aspectRatio: '16:9'
@@ -108,12 +137,7 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
 
     } catch (err: any) {
       console.error(err);
-      if (err.message?.includes("Requested entity was not found")) {
-        setError("API Key configuration error. Please re-select your key.");
-        await window.aistudio.openSelectKey();
-      } else {
-        setError(err.message || "Failed to generate meme. Please try again.");
-      }
+      setError(err.message || "Failed to generate meme. Please try again.");
       setStatus(GenerationStatus.ERROR);
     }
   };
@@ -140,10 +164,22 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
   return (
     <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-orange-100 transition-all">
       <div className="p-8">
-        <h2 className="text-3xl font-bold text-orange-900 mb-6 flex items-center gap-2">
-          <i className="fa-solid fa-wand-magic-sparkles text-orange-500"></i>
-          Create Your Purr-fect Meme
-        </h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-3xl font-bold text-orange-900 flex items-center gap-2">
+            <i className="fa-solid fa-wand-magic-sparkles text-orange-500"></i>
+            Create Your Purr-fect Meme
+          </h2>
+
+          <div className="flex items-center gap-2 bg-orange-50 px-4 py-2 rounded-full border border-orange-100">
+            <span className="text-xs font-bold text-orange-600 uppercase tracking-wider">Demo Mode</span>
+            <button
+              onClick={() => setIsMockMode(!isMockMode)}
+              className={`w-10 h-5 rounded-full relative transition-colors ${isMockMode ? 'bg-orange-500' : 'bg-gray-300'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isMockMode ? 'left-6' : 'left-1'}`}></div>
+            </button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column: Upload & Options */}
@@ -151,24 +187,22 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-700">1. Select Meme Type</label>
               <div className="flex gap-4">
-                <button 
+                <button
                   onClick={() => setSelectedType(MemeType.PHOTO)}
-                  className={`flex-1 p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
-                    selectedType === MemeType.PHOTO 
-                    ? 'border-orange-500 bg-orange-50 text-orange-700' 
+                  className={`flex-1 p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${selectedType === MemeType.PHOTO
+                    ? 'border-orange-500 bg-orange-50 text-orange-700'
                     : 'border-gray-100 hover:border-orange-200 text-gray-400'
-                  }`}
+                    }`}
                 >
                   <i className="fa-solid fa-camera text-2xl"></i>
                   <span className="font-medium">Photo Meme</span>
                 </button>
-                <button 
+                <button
                   onClick={() => setSelectedType(MemeType.VIDEO)}
-                  className={`flex-1 p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
-                    selectedType === MemeType.VIDEO 
-                    ? 'border-orange-500 bg-orange-50 text-orange-700' 
+                  className={`flex-1 p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${selectedType === MemeType.VIDEO
+                    ? 'border-orange-500 bg-orange-50 text-orange-700'
                     : 'border-gray-100 hover:border-orange-200 text-gray-400'
-                  }`}
+                    }`}
                 >
                   <i className="fa-solid fa-video text-2xl"></i>
                   <span className="font-medium">Video Meme</span>
@@ -177,8 +211,8 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700">2. Upload your Cat (Optional for Video)</label>
-              <div 
+              <label className="block text-sm font-semibold text-gray-700">2. Upload your Cat</label>
+              <div
                 onClick={() => !isConverting && fileInputRef.current?.click()}
                 className={`group relative h-48 border-2 border-dashed border-orange-200 rounded-3xl flex flex-col items-center justify-center transition-all overflow-hidden ${isConverting ? 'cursor-wait bg-orange-50/20' : 'cursor-pointer hover:border-orange-400 hover:bg-orange-50/30'}`}
               >
@@ -200,22 +234,21 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
                       <i className="fa-solid fa-cloud-arrow-up text-xl"></i>
                     </div>
                     <p className="text-gray-500 text-sm">Click to upload photo</p>
-                    <p className="text-gray-400 text-xs mt-1">Supports JPG, PNG, HEIC</p>
                   </>
                 )}
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept="image/*, .heic, .heif" 
-                  className="hidden" 
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*, .heic, .heif"
+                  className="hidden"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-700">3. Add Funny Context</label>
-              <textarea 
+              <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Ex: 'Cat eating spaghetti' or 'Angry cat demands snacks'..."
@@ -226,11 +259,10 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
             <button
               onClick={handleGenerate}
               disabled={status === GenerationStatus.GENERATING || isConverting}
-              className={`w-full py-4 rounded-2xl font-bold text-lg shadow-lg flex items-center justify-center gap-3 transition-all ${
-                status === GenerationStatus.GENERATING || isConverting
+              className={`w-full py-4 rounded-2xl font-bold text-lg shadow-lg flex items-center justify-center gap-3 transition-all ${status === GenerationStatus.GENERATING || isConverting
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-[0.98]'
-              }`}
+                }`}
             >
               {status === GenerationStatus.GENERATING ? (
                 <>
@@ -240,16 +272,22 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
               ) : (
                 <>
                   <i className="fa-solid fa-paw"></i>
-                  Generate Meme
+                  {isMockMode ? "Generate (Demo Mode)" : "Generate Meme"}
                 </>
               )}
             </button>
-            
+
             {error && (
               <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm flex items-center gap-3">
                 <i className="fa-solid fa-circle-exclamation"></i>
                 {error}
               </div>
+            )}
+
+            {isMockMode && (
+              <p className="text-xs text-orange-400 italic text-center">
+                💡 Demo mode is ON: Captions are locally generated to save API quota.
+              </p>
             )}
           </div>
 
@@ -263,40 +301,40 @@ const MemeCreator: React.FC<MemeCreatorProps> = ({ onMemeGenerated }) => {
                     <div className="absolute inset-0 rounded-full border-4 border-orange-200 animate-pulse"></div>
                     <div className="absolute inset-0 rounded-full border-4 border-orange-500 border-t-transparent animate-spin"></div>
                     <div className="absolute inset-0 flex items-center justify-center">
-                       <i className="fa-solid fa-cat text-4xl text-orange-500"></i>
+                      <i className="fa-solid fa-cat text-4xl text-orange-500"></i>
                     </div>
                   </div>
                   <h3 className="text-xl font-bold text-orange-800 mb-2">Creating Meme...</h3>
                   <p className="text-orange-600/60 text-sm italic">
-                    {selectedType === MemeType.VIDEO 
-                      ? "Hang tight! Video generation can take up to a minute of pure feline concentration." 
+                    {selectedType === MemeType.VIDEO
+                      ? "Hang tight! Video generation can take up to a minute of pure feline concentration."
                       : "Processing pixels for maximum laughter..."}
                   </p>
                 </div>
               ) : generatedResult ? (
                 <div className="h-full flex flex-col">
-                  <div className="flex-1 bg-black flex items-center justify-center">
+                  <div className="flex-1 bg-black flex items-center justify-center text-center p-2">
                     {selectedType === MemeType.PHOTO ? (
-                      <img src={generatedResult} alt="Generated Meme" className="max-h-full object-contain" />
+                      <img src={generatedResult} alt="Generated Meme" className="max-h-full object-contain mx-auto" />
                     ) : (
-                      <video 
-                        src={generatedResult} 
-                        controls 
-                        autoPlay 
-                        loop 
-                        className="max-h-full"
+                      <video
+                        src={generatedResult}
+                        controls
+                        autoPlay
+                        loop
+                        className="max-h-full mx-auto"
                       />
                     )}
                   </div>
                   <div className="p-4 bg-white border-t border-orange-100 flex gap-3">
-                    <button 
+                    <button
                       onClick={handleDownload}
                       className="flex-1 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
                     >
                       <i className="fa-solid fa-download"></i>
                       Download
                     </button>
-                    <button 
+                    <button
                       onClick={reset}
                       className="px-6 border-2 border-orange-100 text-orange-400 py-3 rounded-xl font-bold hover:bg-orange-50 hover:text-orange-600 transition-all"
                     >

@@ -26,6 +26,11 @@ export interface VideoGenerationConfig {
   aspectRatio: '16:9' | '9:16';
 }
 
+export interface MemeCaptions {
+  topText: string;
+  bottomText: string;
+}
+
 /**
  * Interface representing the global AI Studio key management utility.
  * We declare it here to ensure compatibility with existing environmental types.
