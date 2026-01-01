@@ -74,72 +74,68 @@ export const drawMemeOnCanvas = (
             ctx.drawImage(img, 0, 0, width, height);
 
             // Meme Text Styling (relative to resized width)
-            const fontSize = Math.floor(canvas.width / 12);
+            const fontSize = Math.floor(canvas.width / 15); // Slightly smaller font for better fit
             ctx.font = `bold ${fontSize}px Impact, uppercase, sans-serif`;
             ctx.fillStyle = "white";
             ctx.strokeStyle = "black";
-            ctx.lineWidth = fontSize / 15;
+            ctx.lineWidth = fontSize / 8; // Thicker stroke for better readability
+            ctx.lineJoin = "round"; // Rounded stroke corners
+
+            // Add subtle shadow for depth
+            ctx.shadowColor = "rgba(0,0,0,0.5)";
+            ctx.shadowBlur = fontSize / 10;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 2;
+
             ctx.textAlign = "center";
-            ctx.textBaseline = "top";
 
             // Helper to wrap text
-            const wrapText = (text: string, x: number, y: number, textMaxWidth: number, lineHeight: number) => {
+            const wrapText = (text: string, x: number, y: number, textMaxWidth: number, lineHeight: number, isBottom: boolean) => {
                 const words = text.split(" ");
-                let line = "";
-                let currentY = y;
-
-                for (let n = 0; n < words.length; n++) {
-                    const testLine = line + words[n] + " ";
-                    const metrics = ctx.measureText(testLine);
-                    const testWidth = metrics.width;
-                    if (testWidth > textMaxWidth && n > 0) {
-                        ctx.fillText(line, x, currentY);
-                        ctx.strokeText(line, x, currentY);
-                        line = words[n] + " ";
-                        currentY += lineHeight;
-                    } else {
-                        line = testLine;
-                    }
-                }
-                ctx.fillText(line, x, currentY);
-                ctx.strokeText(line, x, currentY);
-            };
-
-            const padding = canvas.height * 0.05; // 5% padding
-            const lineHeight = fontSize * 1.1;
-
-            // Draw Top Text
-            if (captions.topText) {
-                ctx.textBaseline = "top";
-                wrapText(captions.topText.toUpperCase(), canvas.width / 2, padding, canvas.width - 40, lineHeight);
-            }
-
-            // Draw Bottom Text
-            if (captions.bottomText) {
-                ctx.textBaseline = "bottom";
-                const words = captions.bottomText.split(" ");
                 const lines = [];
                 let currentLine = "";
+
                 for (let n = 0; n < words.length; n++) {
                     const testLine = currentLine + words[n] + " ";
-                    if (ctx.measureText(testLine).width > canvas.width - 40 && n > 0) {
-                        lines.push(currentLine);
+                    const metrics = ctx.measureText(testLine);
+                    if (metrics.width > textMaxWidth && n > 0) {
+                        lines.push(currentLine.trim());
                         currentLine = words[n] + " ";
                     } else {
                         currentLine = testLine;
                     }
                 }
-                lines.push(currentLine);
+                lines.push(currentLine.trim());
 
-                let startY = canvas.height - padding - ((lines.length - 1) * lineHeight);
+                const totalHeight = lines.length * lineHeight;
+                let startY = isBottom ? y - totalHeight + lineHeight : y;
+
                 lines.forEach((line, i) => {
-                    ctx.fillText(line, canvas.width / 2, startY + (i * lineHeight));
-                    ctx.strokeText(line, canvas.width / 2, startY + (i * lineHeight));
+                    const lineY = startY + (i * lineHeight);
+                    ctx.strokeText(line, x, lineY);
+                    ctx.fillText(line, x, lineY);
                 });
+            };
+
+            const edgePadding = canvas.width * 0.05; // 5% horizontal padding
+            const verticalPadding = canvas.height * 0.08; // 8% vertical breathing room
+            const textMaxWidth = canvas.width - (edgePadding * 2);
+            const lineHeight = fontSize * 1.2;
+
+            // Draw Top Text
+            if (captions.topText) {
+                ctx.textBaseline = "top";
+                wrapText(captions.topText.toUpperCase(), canvas.width / 2, verticalPadding, textMaxWidth, lineHeight, false);
+            }
+
+            // Draw Bottom Text
+            if (captions.bottomText) {
+                ctx.textBaseline = "bottom";
+                wrapText(captions.bottomText.toUpperCase(), canvas.width / 2, canvas.height - verticalPadding, textMaxWidth, lineHeight, true);
             }
 
             // Resolve as compressed JPEG instead of PNG to drastically reduce size (11MB -> <500KB)
-            resolve(canvas.toDataURL("image/jpeg", 0.8));
+            resolve(canvas.toDataURL("image/jpeg", 0.85));
         };
         img.onerror = (err) => reject(err);
         img.src = imageUrl;
